@@ -5,8 +5,7 @@ import type {
   CreateBookingPayload,
 } from "../features/booking/types/booking";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ?? "http://localhost:3000/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const BOOKINGS_URL = `${API_BASE_URL}/bookings`;
 const BOOKING_HISTORY_URL = `${API_BASE_URL}/booking-status-history`;

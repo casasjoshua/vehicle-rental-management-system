@@ -6,8 +6,11 @@ import type {
   VehicleStatus,
 } from "../features/vehicles/types/vehicle";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ?? "http://localhost:3000/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "");
+
+if (!API_BASE_URL) {
+  throw new Error("VITE_API_BASE_URL is not configured.");
+}
 
 const VEHICLES_URL = `${API_BASE_URL}/vehicles`;
 
@@ -27,25 +30,42 @@ async function request<T>(
 ): Promise<T> {
   const token = getToken();
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      Accept: "application/json",
-      ...(options.body
-        ? { "Content-Type": "application/json" }
-        : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        Accept: "application/json",
+        ...(options.body
+          ? { "Content-Type": "application/json" }
+          : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+  } catch {
+    if (options.signal?.aborted) {
+      throw new DOMException("Request aborted.", "AbortError");
+    }
+
+    throw new Error(
+      "Unable to connect to the server. Please check your internet connection or backend server."
+    );
+  }
 
   const result = await response.json().catch(() => null);
 
   if (!response.ok) {
     throw new Error(
       result?.message ||
+        result?.error ||
         `Request failed with status ${response.status}.`
     );
+  }
+
+  if (result === null) {
+    throw new Error("The server returned an empty or invalid response.");
   }
 
   return result as T;
@@ -53,12 +73,6 @@ async function request<T>(
 
 /**
  * Extract a vehicle array from supported API response formats.
- *
- * Supported:
- * - [...]
- * - { data: [...] }
- * - { vehicles: [...] }
- * - { data: { vehicles: [...] } }
  */
 function unwrapVehicleList(result: unknown): Vehicle[] {
   if (Array.isArray(result)) {
@@ -97,12 +111,6 @@ function unwrapVehicleList(result: unknown): Vehicle[] {
 
 /**
  * Extract a single vehicle from supported API response formats.
- *
- * Supported:
- * - { data: { id: 1, ... } }
- * - { data: { vehicle: { id: 1, ... } } }
- * - { vehicle: { id: 1, ... } }
- * - { id: 1, ... }
  */
 function unwrapVehicle(result: unknown): Vehicle {
   if (!result || typeof result !== "object") {
@@ -153,15 +161,7 @@ export async function getVehicles(): Promise<Vehicle[]> {
 
 /**
  * Get available vehicles.
- *
- * Without dates:
  * GET /api/vehicles/available
- *
- * With dates:
- * GET /api/vehicles/available?startDate=2026-10-30&endDate=2026-11-02
- *
- * The backend must implement date-based availability filtering
- * for these parameters to affect the results.
  */
 export async function getAvailableVehicles(
   startDate?: string,
@@ -173,12 +173,10 @@ export async function getAvailableVehicles(
     );
   }
 
-  if (startDate && endDate) {
-    if (endDate < startDate) {
-      throw new Error(
-        "Return date must be on or after the pickup date."
-      );
-    }
+  if (startDate && endDate && endDate < startDate) {
+    throw new Error(
+      "Return date must be on or after the pickup date."
+    );
   }
 
   const params = new URLSearchParams();

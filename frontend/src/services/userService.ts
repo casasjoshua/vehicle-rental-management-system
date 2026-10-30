@@ -1,6 +1,9 @@
-const API_BASE_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:3000/api"
-).replace(/\/+$/, "");
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "");
+
+if (!API_BASE_URL) {
+  throw new Error("VITE_API_BASE_URL is not configured.");
+}
 
 export type UserRole = "ADMIN" | "STAFF" | "CUSTOMER";
 
@@ -133,8 +136,6 @@ export async function getUsers(
     query.set("search", search);
   }
 
-  // An empty role means fetch all roles.
-  // Explicit roles filter the result to that role only.
   if (params.role !== undefined && params.role !== "") {
     query.set("role", params.role);
   }

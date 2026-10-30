@@ -8,7 +8,8 @@ import type {
   MeResponse,
 } from "../features/auth/types/auth";
 
-const API_BASE_URL = "http://localhost:3000/api";
+// API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const TOKEN_KEY = "token";
 const USER_KEY = "user";
@@ -45,7 +46,7 @@ export async function registerUser(
   return result;
 }
 
-// Session helpers
+// Session Helpers
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -101,7 +102,7 @@ export async function loginUser(
   return result;
 }
 
-// Current authenticated user
+// Current Authenticated User
 export async function getCurrentUser(): Promise<AuthUser> {
   const token = getToken();
 

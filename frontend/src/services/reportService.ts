@@ -1,6 +1,9 @@
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!API_BASE_URL) {
+  throw new Error("VITE_API_BASE_URL is not configured.");
+}
 
 export type ReportStatusCount = Record<string, number>;
 
@@ -17,7 +20,6 @@ export interface ReportSummary {
     total: number;
     byStatus: ReportStatusCount;
   };
-  // Backend should return revenue as a number.
   revenue: number;
 }
 
@@ -109,16 +111,13 @@ export interface UserReport {
   byRole: ReportStatusCount;
 }
 
-type RequestParams = Record<
-  string,
-  string | number | undefined
->;
+type RequestParams = Record<string, string | number | undefined>;
 
 async function request<T>(
   endpoint: string,
   params?: RequestParams
 ): Promise<T> {
-  const url = new URL(`${API_URL}/reports${endpoint}`);
+  const url = new URL(`${API_BASE_URL}/reports${endpoint}`);
 
   Object.entries(params ?? {}).forEach(([key, value]) => {
     if (value !== undefined && value !== "") {
@@ -150,8 +149,6 @@ async function request<T>(
     throw new Error("The reports API returned an empty response.");
   }
 
-  // Support { data: payload }, { success: true, data: payload },
-  // and APIs that return the payload directly.
   return (result.data ?? result) as T;
 }
 
@@ -161,16 +158,13 @@ export const reportService = {
   getMonthly: (year: number) =>
     request<MonthlyReportResponse>("/monthly", { year }),
 
-  getBookings: (
-    options?: {
-      page?: number;
-      limit?: number;
-      status?: string;
-      from?: string;
-      to?: string;
-    }
-  ) =>
-    request<BookingReportResponse>("/bookings", options),
+  getBookings: (options?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    from?: string;
+    to?: string;
+  }) => request<BookingReportResponse>("/bookings", options),
 
   getVehicles: () =>
     request<VehicleReportResponse | VehicleReportItem[]>("/vehicles"),
