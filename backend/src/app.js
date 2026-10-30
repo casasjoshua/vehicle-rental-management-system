@@ -17,13 +17,33 @@ const reportRoutes = require("./routes/reportRoutes");
 
 const app = express();
 
+// Allowed frontend origins
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://vehicle-rental-management-system-4ku4qythe.vercel.app",
+  ...(process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
+
 // Security middleware
 app.use(helmet());
 
 // CORS configuration
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Allow requests without an Origin header, such as Postman
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.warn("CORS blocked origin:", origin);
+      return callback(new Error("Not allowed by CORS"));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -74,7 +94,7 @@ app.use("/api/dashboard", dashboardRoutes);
 // Admin routes
 app.use("/api/admin", adminRoutes);
 
-//Reports routes
+// Reports routes
 app.use("/api/reports", reportRoutes);
 
 // 404 handler
